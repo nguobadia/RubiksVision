@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+project(squarestest)
+find_package(OpenCV REQUIRED)
+add_executable(squarestest test.cpp)
+target_link_libraries(squarestest ${OpenCV_LIBS})
