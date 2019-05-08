@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/nicole/Documents/Stuff/RubixCube
+CMAKE_SOURCE_DIR = /home/nicole/Documents/RubiksVision
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/nicole/Documents/Stuff/RubixCube
+CMAKE_BINARY_DIR = /home/nicole/Documents/RubiksVision
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nicole/Documents/Stuff/RubixCube/CMakeFiles /home/nicole/Documents/Stuff/RubixCube/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nicole/Documents/RubiksVision/CMakeFiles /home/nicole/Documents/RubiksVision/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nicole/Documents/Stuff/RubixCube/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nicole/Documents/RubiksVision/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,17 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named squarestest
+# Target rules for targets named squares
 
 # Build rule for target.
-squarestest: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 squarestest
-.PHONY : squarestest
+squares: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 squares
+.PHONY : squares
 
 # fast build rule for target.
-squarestest/fast:
-	$(MAKE) -f CMakeFiles/squarestest.dir/build.make CMakeFiles/squarestest.dir/build
-.PHONY : squarestest/fast
+squares/fast:
+	$(MAKE) -f CMakeFiles/squares.dir/build.make CMakeFiles/squares.dir/build
+.PHONY : squares/fast
 
 test.o: test.cpp.o
 
@@ -129,7 +129,7 @@ test.o: test.cpp.o
 
 # target to build an object file
 test.cpp.o:
-	$(MAKE) -f CMakeFiles/squarestest.dir/build.make CMakeFiles/squarestest.dir/test.cpp.o
+	$(MAKE) -f CMakeFiles/squares.dir/build.make CMakeFiles/squares.dir/test.cpp.o
 .PHONY : test.cpp.o
 
 test.i: test.cpp.i
@@ -138,7 +138,7 @@ test.i: test.cpp.i
 
 # target to preprocess a source file
 test.cpp.i:
-	$(MAKE) -f CMakeFiles/squarestest.dir/build.make CMakeFiles/squarestest.dir/test.cpp.i
+	$(MAKE) -f CMakeFiles/squares.dir/build.make CMakeFiles/squares.dir/test.cpp.i
 .PHONY : test.cpp.i
 
 test.s: test.cpp.s
@@ -147,7 +147,7 @@ test.s: test.cpp.s
 
 # target to generate assembly for a file
 test.cpp.s:
-	$(MAKE) -f CMakeFiles/squarestest.dir/build.make CMakeFiles/squarestest.dir/test.cpp.s
+	$(MAKE) -f CMakeFiles/squares.dir/build.make CMakeFiles/squares.dir/test.cpp.s
 .PHONY : test.cpp.s
 
 # Help Target
@@ -157,7 +157,7 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... rebuild_cache"
-	@echo "... squarestest"
+	@echo "... squares"
 	@echo "... edit_cache"
 	@echo "... test.o"
 	@echo "... test.i"

@@ -1,3 +1,3 @@
-/home/nicole/Documents/Stuff/RubixCube/CMakeFiles/rebuild_cache.dir
-/home/nicole/Documents/Stuff/RubixCube/CMakeFiles/squarestest.dir
-/home/nicole/Documents/Stuff/RubixCube/CMakeFiles/edit_cache.dir
+/home/nicole/Documents/RubiksVision/CMakeFiles/rebuild_cache.dir
+/home/nicole/Documents/RubiksVision/CMakeFiles/squares.dir
+/home/nicole/Documents/RubiksVision/CMakeFiles/edit_cache.dir

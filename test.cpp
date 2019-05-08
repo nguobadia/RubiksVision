@@ -2,6 +2,9 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include <iostream>
+#include <fstream>
+#include <stdio.h>
+#include <string>
 
 using namespace cv;
 using namespace std;
@@ -25,25 +28,6 @@ static double angle(Point pt1, Point pt2, Point pt0) {
 // displays the identified squares onto the screen
 static void drawSquares(Mat &image, const vector<vector<Point>> &squares) {
 
-    /*for( size_t i = 0; i < squares.size(); i++ )
-    {
-        const Point* p = &squares[i][0];
-        int n = (int)squares[i].size();
-        int shift = 1;
-
-        Rect r=boundingRect( Mat(squares[i]));
-        r.x = r.x + r.width / 4;
-        r.y = r.y + r.height / 4;
-        r.width = r.width / 2;
-        r.height = r.height / 2;
-
-        Mat roi = image(r);
-        Scalar color = mean(roi);
-        polylines(image, &p, &n, 1, true, color, 2, LINE_AA, shift);
-
-        Point center( r.x + r.width/2, r.y + r.height/2 );
-        ellipse( image, center, Size( r.width/2, r.height/2), 0, 0, 360, color, 2, LINE_AA );
-    }*/
 
     for (size_t i = 0; i < squares.size(); i++) {
 
@@ -82,7 +66,7 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
     gray0 = hsv_channels[2]; // the 3rd channel is a grayscale value
     GaussianBlur(gray0, gray0, Size(7,7), 1.5, 1.5);
     Canny(gray0, gray, 0, 30, 3);
-    
+
     // find contours and store them all as a list
     findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
     vector<Point> approx;
@@ -115,7 +99,7 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
             // if cosines of all angles are small
             // (all angles are ~90 degree) then write quandrange
             // vertices to resultant sequence
-            if( maxCosine < 0.3 && squares.size() <= 18) squares.push_back(approx);
+            if( maxCosine < 0.3 && squares.size() < 18) squares.push_back(approx);
         }
 
     }
@@ -124,7 +108,9 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
 
 static void detectColors(const Mat &image, const vector<vector<Point>> &squares) {
   vector<Rect> rects;
-	Scalar colors[6] = {
+  rects.clear();
+  // char chars[3][3];
+	Scalar colors[6] = { // BGR
 		{70, 25, 130, 0}, // red
 		{90, 90, 180, 0}, // orange
 		{100, 185, 185, 0}, // yellow
@@ -140,11 +126,18 @@ static void detectColors(const Mat &image, const vector<vector<Point>> &squares)
 
   };
 
-  for (size_t i = 0; i < squares.size(); i ++) {
+  vector<char> chars;
+  int count = 0;
+  for (size_t i = 0; i < squares.size(); i+= 2) {
 
-    Rect r = boundingRect(Mat(squares[i]));
-    if (r.height > 30 && r.width > 30 ) rects.push_back(r);
-    Mat roi = image(r);
+    Rect rect = boundingRect(Mat(squares[i]));
+    if (rect.height <= 30 || rect.width <= 30 ) {
+      continue;
+
+    }
+    rects.push_back(rect);
+    // count++;
+    Mat roi = image(rect);
     Scalar color = mean(roi);
     Scalar tempcolor = {0, 0, 0, 0};
     char c = ' ';
@@ -155,28 +148,28 @@ static void detectColors(const Mat &image, const vector<vector<Point>> &squares)
         + fabs(tempcolor[1] - color[1])
         + fabs(tempcolor[2] - color[2]);
 
-      // cout << delta << endl;
+
+
       if (delta < min) {
         min = delta;
         c = colorchars[r];
+        cout << "Color: " << color << " " << rect << endl;
+        // printf("%c", c);
 
       }
 
     }
-    // cout << "rect: " << r << ", delta: " << min  << ", "<< c  << ": " << color << endl;
 
   }
-  // cout << "size: " << squares.size() / 2 << endl;
+
   bool (*compareFn)(Rect, Rect) = compareRects;
   stable_sort(rects.begin(), rects.end(), compareFn);
+  /*int delta = 25;
+  for (size_t k = 0; k < 9; k += 2) {
+    // Rect current = rects[k];
+    printf("%c", chars[k]);
 
-  for (size_t k = 0; k < rects.size(); k++) {
-    Rect current = rects[k];
-    // if (k % 2 == 0) rects.erase(rects.begin() + k);
-    /*else*/ cout << k + 1 << " : " << current << endl;
-
-  }
-  // cout << "size: " << rects.size() << endl;
+  }*/
 
 
 }
@@ -185,8 +178,17 @@ static void detectColors(const Mat &image, const vector<vector<Point>> &squares)
 static bool compareRects(Rect r1, Rect r2) {
   int delta = 25; // allowed difference between the 2 numbers
 
-  if (r1.y + delta > r2.y || r1.y - delta < r2.y) return (r1.x + delta <= r2.x && r1.x - delta >= r2.x);
-  return (r1.y + delta < r2.y && r1.y - delta > r2.y);
+  if (r1.y + delta > r2.y && r1.y - delta < r2.y) { // y's are equal so sort by the y's
+    return (r1.x + delta < r2.x && r1.x - delta > r2.x);
+
+  } else if (r1.x + delta > r2.x && r1.x - delta < r2.x) { // x's are equal so sort by x's
+    return (r1.y + delta < r2.y && r1.y - delta > r2.y);
+
+
+  } else { // it's a duplicate
+    return 0;
+
+  }
 
 }
 
@@ -196,6 +198,11 @@ int main() {
     vector<vector<Point>> squares;
     VideoCapture cap(0);
 
+// THE MOST GHETTO LOOPING STRUCTURE I'VE EVER DONE PLEASE DON'T JUDGE ME //
+
+   ofstream outfile;
+   outfile.open("Cube.txt");
+    // RED
     while ((int) squares.size() < 18) {
 
       cap >> frame;
@@ -203,13 +210,103 @@ int main() {
 
       findSquares(frame, squares);
       drawSquares(frame, squares);
-      imshow("Rubic Detection Demo", frame);
-      imwrite("test.png", frame);
+      imshow("Red", frame);
+      imwrite("red.png", frame);
       waitKey(1);
 
     }
-
     detectColors(frame, squares);
+    squares.clear();
+    printf(" ");
+    
+    /*string dummy;
+    cout << "Testing : DUMMY\n";
+    getline(cin, dummy, '\n');//  >> dummy;*/
+
+    // ORANGE
+    while ((int) squares.size() < 18) {
+
+      cap >> frame;
+      if (frame.empty()) return -1;
+
+      findSquares(frame, squares);
+      drawSquares(frame, squares);
+      imshow("Orange", frame);
+      imwrite("orange.png", frame);
+      waitKey(1);
+
+    }
+    detectColors(frame, squares);
+    squares.clear();
+    printf(" ");
+
+    //YELLOW
+    while ((int) squares.size() < 18) {
+
+      cap >> frame;
+      if (frame.empty()) return -1;
+
+      findSquares(frame, squares);
+      drawSquares(frame, squares);
+      imshow("Yellow", frame);
+      imwrite("yellow.png", frame);
+      waitKey(1);
+
+    }
+    detectColors(frame, squares);
+    squares.clear();
+    printf(" ");
+
+    // GREEN
+    while ((int) squares.size() < 18) {
+
+      cap >> frame;
+      if (frame.empty()) return -1;
+
+      findSquares(frame, squares);
+      drawSquares(frame, squares);
+      imshow("Green", frame);
+      imwrite("green.png", frame);
+      waitKey(1);
+
+    }
+    detectColors(frame, squares);
+    squares.clear();
+    printf(" ");
+
+    // BLUE
+    while ((int) squares.size() < 18) {
+
+      cap >> frame;
+      if (frame.empty()) return -1;
+
+      findSquares(frame, squares);
+      drawSquares(frame, squares);
+      imshow("Blue", frame);
+      imwrite("blue.png", frame);
+      waitKey(1);
+
+    }
+    detectColors(frame, squares);
+    squares.clear();
+    printf(" ");
+
+    // WHITE
+    while ((int) squares.size() < 18) {
+
+      cap >> frame;
+      if (frame.empty()) return -1;
+
+      findSquares(frame, squares);
+      drawSquares(frame, squares);
+      imshow("White", frame);
+      imwrite("white.png", frame);
+      waitKey(1);
+
+    }
+    detectColors(frame, squares);
+    squares.clear();
+    puts("");
 
     return 0;
 

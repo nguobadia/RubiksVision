@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/nicole/Documents/Stuff/RubixCube/test.cpp" "/home/nicole/Documents/Stuff/RubixCube/CMakeFiles/squarestest.dir/test.cpp.o"
+  "/home/nicole/Documents/RubiksVision/test.cpp" "/home/nicole/Documents/RubiksVision/CMakeFiles/squares.dir/test.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
