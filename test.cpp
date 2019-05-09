@@ -72,7 +72,7 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
     
     
                       
-    dilate(gray0, gray0, InputArrayOfArrays(kernaltemp));
+    dilate(gray0, gray0, InputArrayOfArrays(kernaltemp), Point(-1, -1), 2);
 
     // find contours and store them all as a list
     findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
@@ -106,12 +106,13 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
             // if cosines of all angles are small
             // (all angles are ~90 degree) then write quandrange
             // vertices to resultant sequence
-            if( maxCosine < 0.3 && squares.size() < 18) squares.push_back(approx);
+            if( maxCosine < 0.3 /*&& squares.size() < 18*/) squares.push_back(approx);
         }
 
     }
 
 }
+
 
 static void detectColors(const Mat &image/*, const vector<vector<Point>> squares*/) {
   Mat hsv;
@@ -126,22 +127,53 @@ static void detectColors(const Mat &image/*, const vector<vector<Point>> squares
 static void detectColors(const Mat &image, const vector<vector<Point>> &squares) {
   vector<Rect> rects;
   rects.clear();
+
+  // red
+  Scalar lower_red;
+  Scalar upper_red;
+
+  // orange
+  Scalar lower_orange;
+  Scalar upper_orange;
+
+  // yellow
+  Scalar lower_yellow;
+  Scalar upper_yellow;
+
+  // green
+  Scalar lower_green;
+  Scalar upper_green;
+
+  // blue
   Scalar lower_blue = Scalar(100, 50, 50, 0);
   Scalar upper_blue = Scalar(130, 255, 255, 0);
 
-  for (size_t i = 0; i < squares.size(); i++) {
+  // white
+  Scalar lower_white;
+  Scalar upper_white;
 
-    Rect rect = boundingRect(squares[i]);
+  vector<Rect> rectangles;
+
+  for (size_t i = 0; i < squares.size(); i++) {
+    rectangles.push_back(Rect(boundingRect(squares[i])));
+
+  }
+  groupRectangles(rectangles, 1, .1);
+
+  for (size_t i = 0; i < rectangles.size(); i++) {
+
+    Rect rect = rectangles[i];
     Mat roi = image(rect);
     Mat hsv;
     cvtColor(roi, hsv, COLOR_BGR2HSV);
     Scalar colorRect = mean(hsv);
 
-    cout << colorRect << endl;
+    // cout << rect << endl;
 
-    
 
   }
+
+  cout << rectangles.size() << endl;
 
 	/*Scalar colors[6] = { // BGR
 		{70, 25, 130, 0}, // red
