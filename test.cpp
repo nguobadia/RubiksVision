@@ -66,6 +66,13 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
     gray0 = hsv_channels[2]; // the 3rd channel is a grayscale value
     GaussianBlur(gray0, gray0, Size(7,7), 1.5, 1.5);
     Canny(gray0, gray, 0, 30, 3);
+    int kernaltemp[3][3] = {{1, 1, 1}, 
+                      {1, 1, 1}, 
+                      {1, 1, 1}};
+    
+    
+                      
+    dilate(gray0, gray0, InputArrayOfArrays(kernaltemp));
 
     // find contours and store them all as a list
     findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
@@ -106,11 +113,37 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
 
 }
 
+static void detectColors(const Mat &image/*, const vector<vector<Point>> squares*/) {
+  Mat hsv;
+  cvtColor(image, hsv, COLOR_BGR2HSV);
+  cv::inRange(hsv, Scalar(100, 50, 50), Scalar(130, 255, 255), hsv);
+
+  // imshow("Detecting Red", hsv);
+  // waitKey(1);
+
+}
+
 static void detectColors(const Mat &image, const vector<vector<Point>> &squares) {
   vector<Rect> rects;
   rects.clear();
-  // char chars[3][3];
-	Scalar colors[6] = { // BGR
+  Scalar lower_blue = Scalar(100, 50, 50, 0);
+  Scalar upper_blue = Scalar(130, 255, 255, 0);
+
+  for (size_t i = 0; i < squares.size(); i++) {
+
+    Rect rect = boundingRect(squares[i]);
+    Mat roi = image(rect);
+    Mat hsv;
+    cvtColor(roi, hsv, COLOR_BGR2HSV);
+    Scalar colorRect = mean(hsv);
+
+    cout << colorRect << endl;
+
+    
+
+  }
+
+	/*Scalar colors[6] = { // BGR
 		{70, 25, 130, 0}, // red
 		{90, 90, 180, 0}, // orange
 		{100, 185, 185, 0}, // yellow
@@ -164,18 +197,18 @@ static void detectColors(const Mat &image, const vector<vector<Point>> &squares)
 
   bool (*compareFn)(Rect, Rect) = compareRects;
   stable_sort(rects.begin(), rects.end(), compareFn);
-  /*int delta = 25;
+  int delta = 25;
   for (size_t k = 0; k < 9; k += 2) {
     // Rect current = rects[k];
     printf("%c", chars[k]);
 
-  }*/
+  }
 
 
 }
 
 // compares the coordinates of a rectangle
-static bool compareRects(Rect r1, Rect r2) {
+bool compareRects(Rect r1, Rect r2) {
   int delta = 25; // allowed difference between the 2 numbers
 
   if (r1.y + delta > r2.y && r1.y - delta < r2.y) { // y's are equal so sort by the y's
@@ -188,7 +221,13 @@ static bool compareRects(Rect r1, Rect r2) {
   } else { // it's a duplicate
     return 0;
 
-  }
+  }*/
+
+}
+
+// finds the euclidean distance of colors between 2 pixels
+int euclideanDist(int b1, int b2, int g1, int g2, int r1, int r2) {
+  return ((b2 - b1) * (b2 - b1)) + ((g2 - g1) * (g2 - g1)) + ((r2 - r1) * (r2 - r1));
 
 }
 
@@ -197,6 +236,14 @@ int main() {
     Mat frame;
     vector<vector<Point>> squares;
     VideoCapture cap(0);
+
+    /*for(;;) {
+      cap >> frame;
+      if (frame.empty()) return -1;
+      detectColors(frame);
+
+
+    }*/
 
 // THE MOST GHETTO LOOPING STRUCTURE I'VE EVER DONE PLEASE DON'T JUDGE ME //
 
@@ -217,11 +264,11 @@ int main() {
     }
     detectColors(frame, squares);
     squares.clear();
-    printf(" ");
+    /*printf(" ");
     
-    /*string dummy;
+    string dummy;
     cout << "Testing : DUMMY\n";
-    getline(cin, dummy, '\n');//  >> dummy;*/
+    getline(cin, dummy, '\n');//  >> dummy;
 
     // ORANGE
     while ((int) squares.size() < 18) {
@@ -306,7 +353,7 @@ int main() {
     }
     detectColors(frame, squares);
     squares.clear();
-    puts("");
+    puts("");*/
 
     return 0;
 
