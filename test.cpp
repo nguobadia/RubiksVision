@@ -12,6 +12,13 @@ using namespace std;
 // rectangle comparator
 static bool compareRects(Rect, Rect);
 
+// detects the colors and assigns a char to that color
+static char findCharsForColors(Scalar);
+
+// detects the different between the rgb values of 2 pixels
+static float euclideanDist(float, float, float, float, float, float);
+
+
 // helper function:
 // finds a cosine of angle between vectors
 // from pt0->pt1 and from pt0->pt2
@@ -114,152 +121,103 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
 }
 
 
-static void detectColors(const Mat &image/*, const vector<vector<Point>> squares*/) {
-  Mat hsv;
-  cvtColor(image, hsv, COLOR_BGR2HSV);
-  cv::inRange(hsv, Scalar(100, 50, 50), Scalar(130, 255, 255), hsv);
-
-  // imshow("Detecting Red", hsv);
-  // waitKey(1);
-
-}
-
 static void detectColors(const Mat &image, const vector<vector<Point>> &squares) {
-  vector<Rect> rects;
-  rects.clear();
-
-  // red
-  Scalar lower_red;
-  Scalar upper_red;
-
-  // orange
-  Scalar lower_orange;
-  Scalar upper_orange;
-
-  // yellow
-  Scalar lower_yellow;
-  Scalar upper_yellow;
-
-  // green
-  Scalar lower_green;
-  Scalar upper_green;
-
-  // blue
-  Scalar lower_blue = Scalar(100, 50, 50, 0);
-  Scalar upper_blue = Scalar(130, 255, 255, 0);
-
-  // white
-  Scalar lower_white;
-  Scalar upper_white;
-
   vector<Rect> rectangles;
+  rectangles.clear();
 
   for (size_t i = 0; i < squares.size(); i++) {
     rectangles.push_back(Rect(boundingRect(squares[i])));
 
   }
+
+  // the magical line of code that gets rid of the duplicate squares!!!
   groupRectangles(rectangles, 1, .1);
 
   for (size_t i = 0; i < rectangles.size(); i++) {
 
     Rect rect = rectangles[i];
     Mat roi = image(rect);
-    Mat hsv;
-    cvtColor(roi, hsv, COLOR_BGR2HSV);
-    Scalar colorRect = mean(hsv);
+    // Mat hsv;
+    // cvtColor(roi, hsv, COLOR_BGR2HSV);
+    Scalar colorRect = mean(roi);
 
-    // cout << rect << endl;
+    cout << findCharsForColors(colorRect);
+
+    // cout << "Color: " << colorRect << ", Rect: " << rect << endl;
 
 
   }
+  // puts(" ");
 
-  cout << rectangles.size() << endl;
+  // cout << rectangles.size() << endl;
 
-	/*Scalar colors[6] = { // BGR
-		{70, 25, 130, 0}, // red
-		{90, 90, 180, 0}, // orange
-		{100, 185, 185, 0}, // yellow
-		{65, 95, 35, 0}, // green
-		{140, 25, 0, 0}, // blue
-		{200, 175, 160, 0} // white
+}
 
-	};
+static char findCharsForColors(Scalar colorOfRect) {
 
-  char colorchars[6] = {
+  // scalar representations of the BGR values
+  vector<Scalar> colors = {
+
+    Scalar(35, 10, 105)/*red*/, Scalar(50, 75, 150)/*orange*/, Scalar(50, 150, 140) /*yellow*/,
+    Scalar(60, 110, 25) /*green*/, Scalar(140, 30, 10)/*blue*/, Scalar(200, 185, 170)/*white*/
+
+  };
+
+  vector<Scalar> lower_colors = {
+    Scalar(0, 100, 100)/*red lower bound*/, Scalar(5, 50, 50)/*orange lower bound*/
+
+  };
+
+  vector<Scalar> upper_colors = {
+    Scalar(20, 255, 255)/*red upper bound*/, Scalar(15, 255, 255)/*orange upper bound*/
+
+  };
+
+  char colorChars[] = {
     'R', 'O', 'Y',
     'G', 'B', 'W'
 
   };
 
-  vector<char> chars;
-  int count = 0;
-  for (size_t i = 0; i < squares.size(); i+= 2) {
+  float dist = INT_MAX;
+  float minDist = INT_MAX;
+  char color = ' ';
+  for (size_t i = 0; i < colors.size(); i++) {
+    
+    float b1 = colorOfRect[0];
+    float g1 = colorOfRect[1];
+    float r1 = colorOfRect[2];
 
-    Rect rect = boundingRect(Mat(squares[i]));
-    if (rect.height <= 30 || rect.width <= 30 ) {
-      continue;
+    float b2 = colors[i][0];
+    float g2 = colors[i][1];
+    float r2 = colors[i][2];
 
-    }
-    rects.push_back(rect);
-    // count++;
-    Mat roi = image(rect);
-    Scalar color = mean(roi);
-    Scalar tempcolor = {0, 0, 0, 0};
-    char c = ' ';
-    int min = 1000;
-    for (size_t r = 0; r < 6; r++) { // 6 colors to check
-      tempcolor = colors[r]; // gets the current colors
-      int delta = fabs(tempcolor[0] - color[0])
-        + fabs(tempcolor[1] - color[1])
-        + fabs(tempcolor[2] - color[2]);
-
-
-
-      if (delta < min) {
-        min = delta;
-        c = colorchars[r];
-        cout << "Color: " << color << " " << rect << endl;
-        // printf("%c", c);
-
-      }
+    dist = euclideanDist(b1, b2, g1, g2, r1, r2);
+    if (dist < minDist) {
+      minDist = dist;
+      color = colorChars[i];
 
     }
 
   }
 
-  bool (*compareFn)(Rect, Rect) = compareRects;
-  stable_sort(rects.begin(), rects.end(), compareFn);
-  int delta = 25;
-  for (size_t k = 0; k < 9; k += 2) {
-    // Rect current = rects[k];
-    printf("%c", chars[k]);
-
-  }
-
-
-}
-
-// compares the coordinates of a rectangle
-bool compareRects(Rect r1, Rect r2) {
-  int delta = 25; // allowed difference between the 2 numbers
-
-  if (r1.y + delta > r2.y && r1.y - delta < r2.y) { // y's are equal so sort by the y's
-    return (r1.x + delta < r2.x && r1.x - delta > r2.x);
-
-  } else if (r1.x + delta > r2.x && r1.x - delta < r2.x) { // x's are equal so sort by x's
-    return (r1.y + delta < r2.y && r1.y - delta > r2.y);
-
-
-  } else { // it's a duplicate
-    return 0;
-
-  }*/
-
+  return color;
 }
 
 // finds the euclidean distance of colors between 2 pixels
-int euclideanDist(int b1, int b2, int g1, int g2, int r1, int r2) {
+static float euclideanDist(float b1, float b2, float g1, float g2, float r1, float r2) {
   return ((b2 - b1) * (b2 - b1)) + ((g2 - g1) * (g2 - g1)) + ((r2 - r1) * (r2 - r1));
+
+}
+
+static void delayAndReset(VideoCapture &cap, vector<vector<Point>> &squares) {
+    
+    waitKey(0);
+    squares.clear();
+    cap.release();
+    printf(" ");
+    destroyAllWindows();
+    cap.open(0);
 
 }
 
@@ -269,123 +227,38 @@ int main() {
     vector<vector<Point>> squares;
     VideoCapture cap(0);
 
-    /*for(;;) {
-      cap >> frame;
-      if (frame.empty()) return -1;
-      detectColors(frame);
+    vector<string> windowNames = {
 
+    "Red Side", "Orange Side", "Yellow Side",
+    "Green Side", "Blue Side", "White Side"
 
-    }*/
+    };
+    vector<string> colorNames = {
 
-// THE MOST GHETTO LOOPING STRUCTURE I'VE EVER DONE PLEASE DON'T JUDGE ME //
+    "red.png", "orange.png", "yellow.png", 
+    "green.png", "blue.png", "white.png"
 
-   ofstream outfile;
-   outfile.open("Cube.txt");
-    // RED
-    while ((int) squares.size() < 18) {
+    };
 
-      cap >> frame;
-      if (frame.empty()) return -1;
+    for (size_t i = 0; i < 6; i++) {
 
-      findSquares(frame, squares);
-      drawSquares(frame, squares);
-      imshow("Red", frame);
-      imwrite("red.png", frame);
-      waitKey(1);
+      while ((int) squares.size() < 18) {
+
+        cap >> frame;
+        if (frame.empty()) return -1;
+
+        findSquares(frame, squares);
+        drawSquares(frame, squares);
+        imshow(windowNames[i], frame);
+        imwrite(colorNames[i], frame);
+        waitKey(1);
+
+      }
+    detectColors(frame, squares);
+    delayAndReset(cap, squares);
 
     }
-    detectColors(frame, squares);
-    squares.clear();
-    /*printf(" ");
-    
-    string dummy;
-    cout << "Testing : DUMMY\n";
-    getline(cin, dummy, '\n');//  >> dummy;
-
-    // ORANGE
-    while ((int) squares.size() < 18) {
-
-      cap >> frame;
-      if (frame.empty()) return -1;
-
-      findSquares(frame, squares);
-      drawSquares(frame, squares);
-      imshow("Orange", frame);
-      imwrite("orange.png", frame);
-      waitKey(1);
-
-    }
-    detectColors(frame, squares);
-    squares.clear();
-    printf(" ");
-
-    //YELLOW
-    while ((int) squares.size() < 18) {
-
-      cap >> frame;
-      if (frame.empty()) return -1;
-
-      findSquares(frame, squares);
-      drawSquares(frame, squares);
-      imshow("Yellow", frame);
-      imwrite("yellow.png", frame);
-      waitKey(1);
-
-    }
-    detectColors(frame, squares);
-    squares.clear();
-    printf(" ");
-
-    // GREEN
-    while ((int) squares.size() < 18) {
-
-      cap >> frame;
-      if (frame.empty()) return -1;
-
-      findSquares(frame, squares);
-      drawSquares(frame, squares);
-      imshow("Green", frame);
-      imwrite("green.png", frame);
-      waitKey(1);
-
-    }
-    detectColors(frame, squares);
-    squares.clear();
-    printf(" ");
-
-    // BLUE
-    while ((int) squares.size() < 18) {
-
-      cap >> frame;
-      if (frame.empty()) return -1;
-
-      findSquares(frame, squares);
-      drawSquares(frame, squares);
-      imshow("Blue", frame);
-      imwrite("blue.png", frame);
-      waitKey(1);
-
-    }
-    detectColors(frame, squares);
-    squares.clear();
-    printf(" ");
-
-    // WHITE
-    while ((int) squares.size() < 18) {
-
-      cap >> frame;
-      if (frame.empty()) return -1;
-
-      findSquares(frame, squares);
-      drawSquares(frame, squares);
-      imshow("White", frame);
-      imwrite("white.png", frame);
-      waitKey(1);
-
-    }
-    detectColors(frame, squares);
-    squares.clear();
-    puts("");*/
+    puts(" ");
 
     return 0;
 
