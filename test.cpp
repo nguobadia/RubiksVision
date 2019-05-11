@@ -9,14 +9,8 @@
 using namespace cv;
 using namespace std;
 
-// rectangle comparator
-static bool compareRects(Rect, Rect);
-
 // detects the colors and assigns a char to that color
 static char findCharsForColors(Scalar);
-
-// detects the different between the rgb values of 2 pixels
-static float euclideanDist(float, float, float, float, float, float);
 
 
 // helper function:
@@ -66,10 +60,9 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
     squares.clear();
     Mat gray,gray0,hsv;
     vector<vector<Point>> contours;
-
-    cvtColor(image,hsv,COLOR_BGR2HSV);
+    cvtColor(image, hsv, CV_BGR2HSV);
     Mat hsv_channels[3];
-    cv::split(hsv, hsv_channels); // splits the hsv values into it's own array
+    split(hsv, hsv_channels); // splits the hsv values into it's own array
     gray0 = hsv_channels[2]; // the 3rd channel is a grayscale value
     GaussianBlur(gray0, gray0, Size(7,7), 1.5, 1.5);
     Canny(gray0, gray, 0, 30, 3);
@@ -120,10 +113,11 @@ static void findSquares(const Mat &image, vector<vector<Point>> &squares, bool i
 
 }
 
-
-static void detectColors(const Mat &image, const vector<vector<Point>> &squares) {
-  vector<Rect> rectangles;
+static void detectColors(const Mat &image, const vector<vector<Point>> &squares, vector<char> &charRectangles, 
+                          vector<Rect> &rectangles) {
+  
   rectangles.clear();
+  char color;
 
   for (size_t i = 0; i < squares.size(); i++) {
     rectangles.push_back(Rect(boundingRect(squares[i])));
@@ -132,46 +126,41 @@ static void detectColors(const Mat &image, const vector<vector<Point>> &squares)
 
   // the magical line of code that gets rid of the duplicate squares!!!
   groupRectangles(rectangles, 1, .1);
+  // cv::sortIdx(rectangles, rectangles, cv::SORT_EVERY_ROW | cv::SORT_DESCENDING);
 
   for (size_t i = 0; i < rectangles.size(); i++) {
 
     Rect rect = rectangles[i];
     Mat roi = image(rect);
-    // Mat hsv;
-    // cvtColor(roi, hsv, COLOR_BGR2HSV);
+    Mat hsv;
     Scalar colorRect = mean(roi);
-
-    cout << findCharsForColors(colorRect);
-
-    // cout << "Color: " << colorRect << ", Rect: " << rect << endl;
+    cvtColor(roi, hsv, CV_BGR2HSV);
+    colorRect = mean(hsv);
+    // cout << colorRect << endl;
+    color = findCharsForColors(colorRect);
+    charRectangles.push_back(color);
+    // cout << color;
 
 
   }
-  // puts(" ");
-
-  // cout << rectangles.size() << endl;
 
 }
 
 static char findCharsForColors(Scalar colorOfRect) {
 
-  // scalar representations of the BGR values
-  vector<Scalar> colors = {
-
-    Scalar(35, 10, 105)/*red*/, Scalar(50, 75, 150)/*orange*/, Scalar(50, 150, 140) /*yellow*/,
-    Scalar(60, 110, 25) /*green*/, Scalar(140, 30, 10)/*blue*/, Scalar(200, 185, 170)/*white*/
-
-  };
-
-  vector<Scalar> lower_colors = {
-    Scalar(0, 100, 100)/*red lower bound*/, Scalar(5, 50, 50)/*orange lower bound*/
+  // HSV values
+  vector<Scalar> lb = {
+    Scalar(155, 100, 50)/*red*/, Scalar(0, 100, 50)/*orange*/, Scalar(23, 100, 50) /*yellow*/,
+    Scalar(60, 100, 50)/*green*/, Scalar(76, 100, 50)/*blue*/, Scalar(0, 0, 0)/*white*/
 
   };
 
-  vector<Scalar> upper_colors = {
-    Scalar(20, 255, 255)/*red upper bound*/, Scalar(15, 255, 255)/*orange upper bound*/
+  vector<Scalar> ub = {
+    Scalar(180, 225, 225)/*red*/, Scalar(75, 255, 255)/*orange*/, Scalar(33, 255, 255) /*yellow*/,
+    Scalar(75, 255, 255)/*green*/, Scalar(135, 255, 255)/*blue*/, Scalar(180, 100, 255)/*white*/
 
   };
+  // cout << colorOfRect << endl;
 
   char colorChars[] = {
     'R', 'O', 'Y',
@@ -179,34 +168,31 @@ static char findCharsForColors(Scalar colorOfRect) {
 
   };
 
-  float dist = INT_MAX;
-  float minDist = INT_MAX;
   char color = ' ';
-  for (size_t i = 0; i < colors.size(); i++) {
-    
-    float b1 = colorOfRect[0];
-    float g1 = colorOfRect[1];
-    float r1 = colorOfRect[2];
+  for (size_t i = 0; i < 6; i++) {
 
-    float b2 = colors[i][0];
-    float g2 = colors[i][1];
-    float r2 = colors[i][2];
+    float h = colorOfRect[0];
+    float s = colorOfRect[1];
+    float v = colorOfRect[2];
 
-    dist = euclideanDist(b1, b2, g1, g2, r1, r2);
-    if (dist < minDist) {
-      minDist = dist;
-      color = colorChars[i];
+    float h_lower = lb[i][0];
+    float s_lower = lb[i][1];
+    float v_lower = lb[i][2];
+
+    float h_upper = ub[i][0];
+    float s_upper = ub[i][1];
+    float v_upper = ub[i][2];
+
+    int remh = (int)h % 156;
+    if ((remh < h_upper) && (s < s_upper) && (v < v_upper) && 
+        (remh > h_lower) && (s > s_lower) && (v > v_lower)) {
+
+          color = colorChars[i];
 
     }
 
   }
-
   return color;
-}
-
-// finds the euclidean distance of colors between 2 pixels
-static float euclideanDist(float b1, float b2, float g1, float g2, float r1, float r2) {
-  return ((b2 - b1) * (b2 - b1)) + ((g2 - g1) * (g2 - g1)) + ((r2 - r1) * (r2 - r1));
 
 }
 
@@ -221,45 +207,86 @@ static void delayAndReset(VideoCapture &cap, vector<vector<Point>> &squares) {
 
 }
 
+static void interpreter (vector<char> &face, vector<char> &remap) {
+
+  switch(face[4]) {
+    case('G'):
+    case('R'):
+    case('B'):
+    case('O'):
+      remap[0] = face[8]; remap[1] = face[5]; remap[2] = face[2];
+      remap[3] = face[1]; remap[4] = face[0]; remap[5] = face[3];
+      remap[6] = face[6]; remap[7] = face[7];
+
+    case('W'):
+      remap[0] = face[5]; remap[1] = face[2]; remap[2] = face[1];
+      remap[3] = face[0]; remap[4] = face[3]; remap[5] = face[6];
+      remap[6] = face[7]; remap[7] = face[8];
+    
+    case('Y'):
+      remap[0] = face[5]; remap[1] = face[1]; remap[2] = face[7];
+      remap[3] = face[6]; remap[4] = face[3]; remap[5] = face[0];
+      remap[6] = face[1]; remap[7] = face[2];
+  }
+
+  remap[8] = face[4]; // center piece
+
+}
+
 int main() {
 
     Mat frame;
     vector<vector<Point>> squares;
+    vector<Rect> rectangles;
+    vector<char> unsortedCharRectangles;
+    vector<char> sortedCharRectangles = {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
     VideoCapture cap(0);
+    ofstream cube;
+    cube.open("Cube.txt");
 
     vector<string> windowNames = {
 
-    "Red Side", "Orange Side", "Yellow Side",
-    "Green Side", "Blue Side", "White Side"
+      "Red Side", "Orange Side", "Yellow Side",
+      "Green Side", "Blue Side", "White Side"
 
     };
     vector<string> colorNames = {
 
-    "red.png", "orange.png", "yellow.png", 
-    "green.png", "blue.png", "white.png"
+      "red.png", "orange.png", "yellow.png", 
+      "green.png", "blue.png", "white.png"
 
     };
 
     for (size_t i = 0; i < 6; i++) {
-
-      while ((int) squares.size() < 18) {
-
+      // do whiles are amazing!!
+      do {
         cap >> frame;
         if (frame.empty()) return -1;
 
         findSquares(frame, squares);
         drawSquares(frame, squares);
+        detectColors(frame, squares, unsortedCharRectangles, rectangles);
         imshow(windowNames[i], frame);
         imwrite(colorNames[i], frame);
         waitKey(1);
 
+      } while (squares.size() < 18 && rectangles.size() != 9);
+
+      unsortedCharRectangles.clear();
+      interpreter(unsortedCharRectangles, sortedCharRectangles);
+
+      for (size_t j = 0; j < sortedCharRectangles.size(); j++) {
+        cout << sortedCharRectangles[j];
+        cube << sortedCharRectangles[j];
+
       }
-    detectColors(frame, squares);
-    delayAndReset(cap, squares);
-
+      cube << " ";
+      delayAndReset(cap, squares);
+    
     }
-    puts(" ");
+  puts(" ");
+  cube.close();
 
-    return 0;
+  return 0;
 
 }
